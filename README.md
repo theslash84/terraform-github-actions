@@ -1,75 +1,235 @@
-# GitHub Actions Workflows for Terraform
+![Terrascan](https://raw.githubusercontent.com/tenable/runterrascan.io/main/static/images/TerrascanTM_BY_Logo.png)
 
-This is a sample repository that shows how to use GitHub Actions workflows to manage Azure infrastructure with Terraform. 
+[![GitHub release](https://img.shields.io/github/release/tenable/terrascan)](https://github.com/tenable/terrascan/releases/latest)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202-blue)](https://github.com/tenable/terrascan/blob/master/LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/tenable/terrascan/pulls)
+![CI](https://github.com/tenable/terrascan/workflows/build/badge.svg)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=tenable_terrascan&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=tenable_terrascan)
+[![AUR package](https://repology.org/badge/version-for-repo/aur/terrascan.svg)](https://repology.org/project/terrascan/versions)
+[![codecov](https://codecov.io/gh/tenable/terrascan/branch/master/graph/badge.svg)](https://codecov.io/gh/tenable/terrascan)
+[![Documentation Status](https://readthedocs.com/projects/tenable-terrascan/badge/?version=latest)](https://runterrascan.io/)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](code_of_conduct.md)
+![GitHub all releases](https://img.shields.io/github/downloads/tenable/terrascan/total)
 
-## Architecture
+## Introduction
 
-<img width="2159" alt="GitHub Actions CICD for Terraform" src="https://user-images.githubusercontent.com/1248896/189254453-439dd558-fc6c-4377-b01c-d5e54cc49403.png">
+Terrascan is a static code analyzer for Infrastructure as Code. Terrascan allows you to:
 
-## Dataflow
+- Seamlessly scan infrastructure as code for misconfigurations.
+- Monitor provisioned cloud infrastructure for configuration changes that introduce posture drift, and enables reverting to a secure posture.
+- Detect security vulnerabilities and compliance violations.
+- Mitigate risks before provisioning cloud native infrastructure.
+- Offers flexibility to run locally or integrate with your CI\CD.
 
-1. Create a new branch and check in the needed Terraform code modifications.
-2. Create a Pull Request (PR) in GitHub once you're ready to merge your changes into your environment.
-3. A GitHub Actions workflow will trigger to ensure your code is well formatted, internally consistent, and produces secure infrastructure. In addition, a Terraform plan will run to generate a preview of the changes that will happen in your Azure environment.
-4. Once appropriately reviewed, the PR can be merged into your main branch.
-5. Another GitHub Actions workflow will trigger from the main branch and execute the changes using Terraform.
-6. A regularly scheduled GitHub Action workflow should also run to look for any configuration drift in your environment and create a new issue if changes are detected.
 
-## Workflows
 
-1. [**Terraform Unit Tests**](.github/workflows/tf-unit-tests.yml)
+### Resources
+* To try Terrascan in your browser, see the Terrascan Sandbox https://www.tenable.com/terrascan
 
-    This workflow runs on every commit and is composed of a set of unit tests on the infrastructure code. It runs [terraform fmt]( https://www.terraform.io/cli/commands/fmt) to ensure the code is properly linted and follows terraform best practices. Next it performs [terraform validate](https://www.terraform.io/cli/commands/validate) to check that the code is syntactically correct and internally consistent. Lastly, [checkov](https://github.com/bridgecrewio/checkov), an open source static code analysis tool for IaC, will run to detect security and compliance issues. If the repository is utilizing GitHub Advanced Security (GHAS), the results will be uploaded to GitHub.
+* To learn more about Terrascan's features and capabilities, see the documentation portal: https://runterrascan.io
 
-2. [**Terraform Plan / Apply**](.github/workflows/tf-plan-apply.yml)
+<p align="center">
+    Join Tenable community 👇
+<br/>
+<a href="https://discord.gg/ScUPMzyG3n">
+    <img src="http://fig.io/icons/discord-logo-square.png" width="80px" height="80px" />
+</a>
+</p>
 
-    This workflow runs on every pull request and on each commit to the main branch. The plan stage of the workflow is used to understand the impact of the IaC changes on the Azure environment by running [terraform plan](https://www.terraform.io/cli/commands/plan). This report is then attached to the PR for easy review. The apply stage runs after the plan when the workflow is triggered by a push to the main branch. This stage will take the plan document and [apply](https://www.terraform.io/cli/commands/apply) the changes after a manual review has signed off if there are any pending changes to the environment.
 
-3. [**Terraform Drift Detection**](.github/workflows/tf-drift.yml)
+## Key features
+* 500+ Policies for security best practices
+* Scanning of [Terraform](https://runterrascan.io/docs/usage/command_line_mode/#scanning-current-directory-containing-terraform-files-for-aws-resources) (HCL2)
+* Scanning of AWS CloudFormation Templates (CFT)
+* * Scanning of Azure Resource Manager (ARM)
+* Scanning of [Kubernetes](https://runterrascan.io/docs/usage/command_line_mode/#scanning-for-a-specific-iac-provider) (JSON/YAML), [Helm](https://runterrascan.io/docs/usage/command_line_mode/#scanning-a-helm-chart) v3, and [Kustomize](https://runterrascan.io/docs/usage/command_line_mode/#scanning-a-kustomize-chart)
+* Scanning of [Dockerfiles](https://runterrascan.io/docs/usage/command_line_mode/#scanning-a-dockerfile)
+* Support for [AWS](https://runterrascan.io/docs/policies/aws/), [Azure](https://runterrascan.io/docs/policies/azure/), [GCP](https://runterrascan.io/docs/policies/gcp/), [Kubernetes](https://runterrascan.io/docs/policies/k8s/), [Dockerfile](https://runterrascan.io/docs/policies/docker/), and [GitHub](https://runterrascan.io/docs/policies/github/)
+* Integrates with docker image vulnerability scanning for AWS, Azure, GCP, Harbor container registries.
 
-    This workflow runs on a periodic basis to scan your environment for any configuration drift or changes made outside of terraform. If any drift is detected, a GitHub Issue is raised to alert the maintainers of the project.
+## Quick Start
 
-## Getting Started
+1. [Install](#install)
+2. [Scan](#scan)
+3. [Integrate](#integrate)
 
-To use these workflows in your environment several prerequisite steps are required:
+### Step 1: Install
+Terrascan supports multiple ways to install and is also available as a Docker image.
+See Terrascan's [releases](https://github.com/tenable/terrascan/releases) page for the latest version of builds in all supported platforms. Select the correct binary for your platform.
 
-1. **Configure Terraform State Location**
+#### Install as a native executable
 
-    Terraform utilizes a [state file](https://www.terraform.io/language/state) to store information about the current state of your managed infrastructure and associated configuration. This file will need to be persisted between different runs of the workflow. The recommended approach is to store this file within an Azure Storage Account or other similar remote backend. Normally, this storage would be provisioned manually or via a separate workflow. The [Terraform backend block](main.tf#L10-L16) will need updated with your selected storage location (see [here](https://developer.hashicorp.com/terraform/language/settings/backends/azurerm) for documentation).
+```sh
+$ curl -L "$(curl -s https://api.github.com/repos/tenable/terrascan/releases/latest | grep -o -E "https://.+?_Darwin_x86_64.tar.gz")" > terrascan.tar.gz
+$ tar -xf terrascan.tar.gz terrascan && rm terrascan.tar.gz
+$ install terrascan /usr/local/bin && rm terrascan
+$ terrascan
+```
 
-2. **Create GitHub Environment**
+#### Install on ArchLinux / Manjaro via `AUR`
 
-    The workflows utilizes GitHub Environments and Secrets to store the azure identity information and setup an approval process for deployments. Create an environment named `production` by following these [instructions](https://docs.github.com/actions/deployment/targeting-different-environments/using-environments-for-deployment#creating-an-environment). On the `production` environment setup a protection rule and add any required approvers you want that need to sign off on production deployments. You can also limit the environment to your main branch. Detailed instructions can be found [here](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment#environment-protection-rules).
+ArchLinux and Manjaro users can install by:
 
-3. **Setup Azure Identity**: 
+```
+yay -S terrascan
+```
 
-    An Azure Active Directory application is required that has permissions to deploy within your Azure subscription. Create a separate application for a `read-only` and `read/write` accounts and give them the appropriate permissions in your Azure subscription. In addition, both roles will also need at least `Reader and Data Access` permissions to the storage account where the Terraform state from step 1 resides. Next, setup the federated credentials to allow GitHub to utilize the identity using OIDC. See the [Azure documentation](https://docs.microsoft.com/azure/developer/github/connect-from-azure?tabs=azure-portal%2Clinux#use-the-azure-login-action-with-openid-connect) for detailed instructions. 
-    
-    For the `read/write` identity create 1 federated credential as follows:
-    - Set `Entity Type` to `Environment` and use the `production` environment name.
+#### Install via `brew`
 
-    For the `read-only` identity create 2 federated credentials as follows:
-    - Set `Entity Type` to `Pull Request`.
-    - Set `Entity Type` to `Branch` and use the `main` branch name.
+[Homebrew](https://brew.sh/) users can install by:
 
-4. **Add GitHub Secrets**
+```sh
+$ brew install terrascan
+```
 
-    _Note: While none of the data about the Azure identities contain any secrets or credentials we still utilize GitHub Secrets as a convenient means to parameterize the identity information per environment._
+#### Docker image
 
-    Create the following secrets on the repository using the `read-only` identity:
+Terrascan is also available as a Docker image and can be used as follows
 
-    - `AZURE_CLIENT_ID` : The application (client) ID of the app registration in Azure
-    - `AZURE_TENANT_ID` : The tenant ID of Azure Active Directory where the app registration is defined.
-    - `AZURE_SUBSCRIPTION_ID` : The subscription ID where the app registration is defined.
-    
-    Instructions to add the secrets to the repository can be found [here](https://docs.github.com/en/actions/security-guides/encrypted-secrets#creating-encrypted-secrets-for-a-repository).
-    
-    Additionally create an additional secret on the `production` environment using the `read-write` identity:
-    
-    - `AZURE_CLIENT_ID` : The application (client) ID of the app registration in Azure
+```sh
+$ docker run tenable/terrascan
+```
+Refer to [documentation](https://runterrascan.io/docs/getting-started/) for information.
 
-    Instructions to add the secrets to the environment can be found [here](https://docs.github.com/actions/security-guides/encrypted-secrets#creating-encrypted-secrets-for-an-environment). The environment secret will override the repository secret when doing the deploy step to the `production` environment when elevated read/write permissions are required.
-    
-## Additional Resources
+### Step 2: Scan
+To scan your code for security issues you can run the following (defaults to scanning Terraform).
 
-A companion article detailing how to use GitHub Actions to deploy to Azure using IaC can be found at the [DevOps Resource Center](). `TODO: add link`
+```sh
+$ terrascan scan
+```
+**Note**: Terrascan will exit with an error code if any errors or violations are found during a scan.
+
+#### List of possible Exit Codes
+| Scenario      | Exit Code |
+| ----------- | ----------- |
+| scan summary has errors and violations | 5 |
+| scan summary has errors but no violations | 4 |
+| scan summary has violations but no errors | 3 |
+| scan summary has no violations or errors | 0 |
+| scan command errors out due to invalid inputs | 1 |
+### Step 3: Integrate with CI\CD
+
+Terrascan can be integrated into CI/CD pipelines to enforce security best practices.
+Please refer to our [documentation to integrate with your pipeline](https://runterrascan.io/docs/integrations/).
+
+## Terrascan Commands
+You can use the `terrascan` command with the following options:
+
+```sh
+$ terrascan
+Terrascan
+
+Usage:
+  terrascan [command]
+
+Available Commands:
+  help        Help about any command
+  init        Initialize Terrascan
+  scan        Detect compliance and security violations across Infrastructure as Code.
+  server      Run Terrascan as an API server
+  version     Terrascan version
+
+Flags:
+  -c, --config-path string   config file path
+  -h, --help                 help for terrascan
+  -l, --log-level string     log level (debug, info, warn, error, panic, fatal) (default "info")
+  -x, --log-type string      log output type (console, json) (default "console")
+  -o, --output string        output type (human, json, yaml, xml) (default "human")
+
+Use "terrascan [command] --help" for more information about a command.
+```
+
+## Policies
+Terrascan policies are written using the [Rego policy language](https://www.openpolicyagent.org/docs/latest/policy-language/). Every rego includes a JSON "rule" file which defines metadata for the policy.
+By default, Terrascan downloads policies from Terrascan repositories while scanning for the first time. However, if you want to download the latest policies, you need to run the Initialization process. See [Usage](https://runterrascan.io/docs/usage/command_line_mode/) for information about the Initialization process.
+
+Note: The scan command will implicitly run the initialization process if there are no policies found.
+
+## Docker Image Vulnerabilities
+You can use the `--find-vuln` flag to collect vulnerabilities as reported in its registry as part of Terrascan's output. Currently Terrascan supports Elastic Container Registry (ECR), Azure Container Registry, Google Container Registry, and Google Artifact Registry.
+
+The `--find-vuln` flag can be used when scanning IaC files as follows:
+
+```
+$ terrascan scan -i <IaC provider> --find-vuln
+```
+
+For more information and explanation of how to setup your environment to authenticate with the registry's APIs see the [usage](https://runterrascan.io/docs/usage/command_line_mode/) documentation.
+
+## Customizing scans
+
+By default, Terrascan scans your entire configuration against all policies. However, Terrascan supports granular configuration of policies and resources.
+
+Read more about [in-file instrumentation](https://runterrascan.io/docs/usage/in-file_instrumentation/) and [the config file](https://runterrascan.io/docs/usage/config_options/) on our documentation site.
+
+For now, some quick tips:
+
+- [Exclude a particular policy for a specific resource.](#How_to_exclude_a_policy_while_scanning_a_resource)
+- [Manually configure policies to be suppressed or applied globally from a scan across all resources or, for just a particular resource.](#_How_to_include_or_exclude_specific_policies_or_resources_from_being_scanned)
+
+### How to exclude a policy while scanning a resource
+
+You can configure Terrascan to skip a particular policy (rule) while scanning a resource. Follow these steps depending on your platform:
+
+#### Terraform
+Use Terraform scripts to configure Terrascan to skip rules by inserting a comment with the phrase `"ts:skip=<RULENAME><SKIP_REASON>"`. The comment should be included inside the resource as shown in the example below.
+
+![tf](docs/img/tf_skip_rule.png)
+
+#### Kubernetes
+In Kubernetes yamls, you can configure Terrascan to skip policies by adding an annotation as seen in the snippet below.
+
+![k8s](docs/img/skiprules.png)
+
+### How to include or exclude specific policies or resources from being scanned
+
+Use the Terrascan config file to manually select the policies which should be included or excluded from the entire scan. This is suitable for edge use cases.
+Use the "in-file" suppression option to specify resources that should be excluded from being tested against selected policies. This ensures that the policies are skipped only for particular resources, rather than all of the resources.
+
+![config](https://user-images.githubusercontent.com/74685902/105115887-83e2f380-5a7e-11eb-82b8-a1d18c83a405.png)
+
+### Sample scan output
+
+Terrascan's default output is a list of violations present in the scanned IaC. A sample output:
+
+![Screenshot 2021-01-19 at 10 52 47 PM](https://user-images.githubusercontent.com/74685902/105115731-32d2ff80-5a7e-11eb-93b0-2f0620eb1295.png)
+
+## Building Terrascan
+Terrascan can be built locally. This is helpful if you want to be on the latest version or when developing Terrascan. [gcc](https://gcc.gnu.org/install/) and [Go](https://go.dev/doc/install) 1.19 or above are required.
+
+```sh
+$ git clone git@github.com:tenable/terrascan.git
+$ cd terrascan
+$ make build
+$ ./bin/terrascan
+```
+
+### To build your own docker, refer to this example (Alpine Linux):
+```
+FROM golang:alpine AS build-env
+
+RUN apk add --update git
+
+RUN git clone https://github.com/tenable/terrascan && cd terrascan \
+  && CGO_ENABLED=0 GO111MODULE=on go build -o /go/bin/terrascan cmd/terrascan/main.go
+
+```
+
+## Developing Terrascan
+To learn more about developing and contributing to Terrascan, refer to the [contributing guide](CONTRIBUTING.md).
+
+## Code of Conduct
+We believe having an open and inclusive community benefits all of us. Please note that this project is released with a [Contributor Code of Conduct](code_of_conduct.md). By participating in this project you agree to abide by its terms.
+
+## License
+
+Terrascan is licensed under the [Apache 2.0 License](LICENSE).
+
+### Stargazers
+
+[![Stargazers @tenable/terrascan](https://reporoster.com/stars/tenable/terrascan)](https://github.com/tenable/terrascan/stargazers)
+
+### Forkers
+
+[![Forkers @tenable/terrascan](https://reporoster.com/forks/tenable/terrascan)](https://github.com/tenable/terrascan/network/members)
+
